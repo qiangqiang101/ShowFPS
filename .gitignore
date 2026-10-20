@@ -1,0 +1,16 @@
+# Build directories
+build/
+bin/
+dist/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.VC.db
+*.opendb
+
+# Windows
+Thumbs.db
+Desktop.ini

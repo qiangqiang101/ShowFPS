@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build Release and Package dist
+        run: cmake --build build --config Release --target dist
+
+      - name: Create Release Archive
+        id: archive
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          if (-not $tag) {
+            $tag = "v1.0.0"
+          }
+          $zipName = "ShowFPS-$tag.zip"
+          Compress-Archive -Path "build\dist\*" -DestinationPath $zipName -Force
+          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.archive.outputs.tag }} "${{ steps.archive.outputs.zip_name }}" --clobber
+
+      - name: Upload Artifact (Manual Runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.zip_name }}
+          path: ${{ steps.archive.outputs.zip_name }}
