@@ -28,7 +28,11 @@ void FpsCounter::OnFrame() {
         double elapsedSec = static_cast<double>(now.QuadPart - m_lastIntervalTime.QuadPart) / static_cast<double>(m_frequency.QuadPart);
         double intervalSec = static_cast<double>(g_Config.updateIntervalMs) / 1000.0;
 
-        if (elapsedSec >= intervalSec && elapsedSec > 0.0) {
+        if (elapsedSec > 2.0) {
+            // Gap, loading screen or pause: reset window so average isn't dragged down
+            m_lastIntervalTime = now;
+            m_intervalFrameCount = 1;
+        } else if (elapsedSec >= intervalSec && elapsedSec > 0.0) {
             float calculatedFps = static_cast<float>(static_cast<double>(m_intervalFrameCount) / elapsedSec);
             float calculatedFrameTimeMs = static_cast<float>((elapsedSec / static_cast<double>(m_intervalFrameCount)) * 1000.0);
 
@@ -42,4 +46,17 @@ void FpsCounter::OnFrame() {
 
     m_lastFrameTime = now;
     LeaveCriticalSection(&m_cs);
+}
+
+float FpsCounter::GetFps() {
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    if (m_frequency.QuadPart > 0 && m_lastFrameTime.QuadPart > 0) {
+        double elapsedSinceLastFrame = static_cast<double>(now.QuadPart - m_lastFrameTime.QuadPart) / static_cast<double>(m_frequency.QuadPart);
+        // If more than 1.5 seconds have elapsed since the last rendered frame, framerate has halted
+        if (elapsedSinceLastFrame > 1.5) {
+            return 0.0f;
+        }
+    }
+    return m_displayFps.load(std::memory_order_relaxed);
 }

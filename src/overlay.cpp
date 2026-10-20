@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <vector>
+#include <dwmapi.h>
 
 OverlayWindow g_Overlay;
 
@@ -217,6 +218,23 @@ void OverlayWindow::UpdatePositionAndRender() {
     float fps = g_FpsCounter.GetFps();
     float ft = g_FpsCounter.GetFrameTimeMs();
     int gpu = g_GpuMonitor.GetGpuUsage();
+
+    // Emergency fallback if DXGI hooks receive no calls after window is active
+    if (g_FpsCounter.GetTotalFrames() == 0 && m_gameHwnd && IsWindow(m_gameHwnd)) {
+        static DWORD s_firstActiveTime = 0;
+        if (s_firstActiveTime == 0) s_firstActiveTime = GetTickCount();
+        if (GetTickCount() - s_firstActiveTime > 3000) {
+            DWM_TIMING_INFO ti{};
+            ti.cbSize = sizeof(ti);
+            if (SUCCEEDED(DwmGetCompositionTimingInfo(m_gameHwnd, &ti)) && ti.rateRefresh.uiDenominator > 0) {
+                float refreshFps = static_cast<float>(ti.rateRefresh.uiNumerator) / static_cast<float>(ti.rateRefresh.uiDenominator);
+                if (refreshFps > 0.0f) {
+                    fps = refreshFps;
+                    ft = (1000.0f / refreshFps);
+                }
+            }
+        }
+    }
 
     wchar_t textBuf[128];
     if (g_Config.showGpuUsage && g_Config.showFrameTime) {

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <atomic>
+#include <cstdint>
 
 class FpsCounter {
 public:
@@ -10,7 +11,7 @@ public:
     void Init();
     void OnFrame();
 
-    float GetFps() const { return m_displayFps.load(std::memory_order_relaxed); }
+    float GetFps();
     float GetFrameTimeMs() const { return m_displayFrameTimeMs.load(std::memory_order_relaxed); }
     uint64_t GetTotalFrames() const { return m_totalFrames.load(std::memory_order_relaxed); }
 
