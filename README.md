@@ -40,7 +40,7 @@ A real-time, hardware-accurate in-game FPS and frametime overlay mod for **Forza
 
 ```text
 azimuth.exe
-d3dcompiler_47.dll          <-- The FH2 Mod Platform
+DWrite.dll                  <-- The FH2 Mod Platform
 fh2-mods/
   ShowFPS.dll               <-- The ShowFPS mod DLL
   ShowFPS.ini               <-- Configuration file (together with the DLL)
@@ -131,7 +131,7 @@ After building, the ready-to-use release folder is located in `build/dist/`.
 
 ```mermaid
 flowchart TD
-    A[Azimuth / FH2 Launch] --> B[d3dcompiler_47.dll Platform Loader]
+    A[Azimuth / FH2 Launch] --> B[DWrite.dll Platform Loader]
     B --> C[fh2-mods/ShowFPS.dll]
     C --> D[fh2mod_init Entry Point]
     D --> E[Register Mod with FH2ModApi]

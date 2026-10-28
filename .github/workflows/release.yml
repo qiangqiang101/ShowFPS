@@ -18,11 +18,21 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Configure CMake
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      # The platform uses __try/__except, which MSVC rejects in some of its
+      # functions; it is built with llvm-mingw (Clang), like every FH2 mod.
+      - name: Install llvm-mingw
+        shell: pwsh
+        run: |
+          $v = "20261020"
+          Invoke-WebRequest "https://github.com/mstorsjo/llvm-mingw/releases/download/$v/llvm-mingw-$v-ucrt-x86_64.zip" -OutFile llvm-mingw.zip
+          Expand-Archive llvm-mingw.zip -DestinationPath "$env:RUNNER_TEMP"
+          "$env:RUNNER_TEMP\llvm-mingw-$v-ucrt-x86_64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
-      - name: Build Release and Package dist
-        run: cmake --build build --config Release --target dist
+      - name: Configure CMake
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=platform/cmake/mingw-w64-x86_64.cmake
+
+      - name: Build and Package dist
+        run: cmake --build build --target dist
 
       - name: Create Release Archive
         id: archive
@@ -30,7 +40,7 @@ jobs:
         run: |
           $tag = "${{ github.event.release.tag_name }}"
           if (-not $tag) {
-            $tag = "v1.0.0"
+            $tag = "v1.1.1"
           }
           $zipName = "ShowFPS-$tag.zip"
           Compress-Archive -Path "build\dist\*" -DestinationPath $zipName -Force

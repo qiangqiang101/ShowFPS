@@ -390,6 +390,28 @@ bool InstallDxgiHooks(const FH2ModApi* api, FH2Mod* mod) {
     return true;
 }
 
+void DxgiHookDiagnose(const FH2ModApi* api, FH2Mod* mod, bool retry) {
+    if (!api || !mod) return;
+    char msg[256];
+    std::snprintf(msg, sizeof(msg),
+        "[bugtrap] hooks: Present=%p Present1=%p CreateSC=%p CreateSCHwnd=%p CreateSCComp=%p; "
+        "orig: Present=%p Present1=%p; vmt: Present=%p Present1=%p; calls: Present=%llu Present1=%llu",
+        static_cast<void*>(g_HookPresent), static_cast<void*>(g_HookPresent1),
+        static_cast<void*>(g_HookCreateSwapChain), static_cast<void*>(g_HookCreateSwapChainForHwnd),
+        static_cast<void*>(g_HookCreateSwapChainForComposition),
+        reinterpret_cast<void*>(g_OrigPresent), reinterpret_cast<void*>(g_OrigPresent1),
+        reinterpret_cast<void*>(g_VmtOrigPresent), reinterpret_cast<void*>(g_VmtOrigPresent1),
+        static_cast<unsigned long long>(g_PresentCalls.load()),
+        static_cast<unsigned long long>(g_Present1Calls.load()));
+    api->log(mod, msg);
+
+    if (retry && api->api_version >= 3) {
+        int res = api->enable_hooks(mod, nullptr);
+        std::snprintf(msg, sizeof(msg), "[bugtrap] re-enabled hooks, enable_hooks returned %d", res);
+        api->log(mod, msg);
+    }
+}
+
 void UninstallDxgiHooks(const FH2ModApi* api, FH2Mod* mod) {
     if (api && mod && api->api_version >= 3) {
         api->disable_hooks(mod, nullptr);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(showfps VERSION 1.1.0 LANGUAGES C CXX RC)
+project(showfps VERSION 1.1.1 LANGUAGES C CXX RC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -58,7 +58,7 @@ endif()
 # Package target for easy distribution
 add_custom_target(dist
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/fh2-mods
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:fh2mod_platform> ${CMAKE_BINARY_DIR}/dist/d3dcompiler_47.dll
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:fh2mod_platform>/DWrite.dll ${CMAKE_BINARY_DIR}/dist/DWrite.dll
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:showfps> ${CMAKE_BINARY_DIR}/dist/fh2-mods/ShowFPS.dll
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/ShowFPS.ini ${CMAKE_BINARY_DIR}/dist/fh2-mods/ShowFPS.ini
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/platform/third_party/minhook/LICENSE.txt ${CMAKE_BINARY_DIR}/dist/LICENSE-MinHook.txt

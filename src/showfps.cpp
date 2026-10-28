@@ -119,6 +119,49 @@ DWORD WINAPI WorkerThread(LPVOID) {
         g_api->log(g_mod, "Failed to install DXGI hooks (fallback timer active)");
     }
 
+    // 5. Bugtrap: watch for the frame counter stalling (FPS stuck at 0) and log why
+    const DWORD kReportAfterMs = 3000;
+    const DWORD kRetryAfterMs = 10000;
+    uint64_t lastFrames = g_FpsCounter.GetTotalFrames();
+    DWORD stallStart = GetTickCount();
+    bool reported = false, retried = false;
+    for (;;) {
+        Sleep(1000);
+        const uint64_t frames = g_FpsCounter.GetTotalFrames();
+        const DWORD now = GetTickCount();
+        char msg[256];
+
+        if (frames != lastFrames) {
+            if (reported) {
+                std::snprintf(msg, sizeof(msg), "[bugtrap] frames resumed after %lu ms stall (total frames %llu)",
+                              static_cast<unsigned long>(now - stallStart), static_cast<unsigned long long>(frames));
+                g_api->log(g_mod, msg);
+            }
+            lastFrames = frames;
+            stallStart = now;
+            reported = retried = false;
+            continue;
+        }
+
+        const DWORD stalledMs = now - stallStart;
+        if (!reported && stalledMs >= kReportAfterMs) {
+            reported = true;
+            HWND fg = GetForegroundWindow();
+            std::snprintf(msg, sizeof(msg),
+                "[bugtrap] no frames for %lu ms: totalFrames=%llu sinceLast=%.2fs fps=%.1f interval=%dms "
+                "foreground=%p minimized=%d",
+                static_cast<unsigned long>(stalledMs), static_cast<unsigned long long>(frames),
+                g_FpsCounter.SecondsSinceLastFrame(), g_FpsCounter.GetFps(), g_Config.updateIntervalMs,
+                static_cast<void*>(fg), fg && IsIconic(fg) ? 1 : 0);
+            g_api->log(g_mod, msg);
+            DxgiHookDiagnose(g_api, g_mod, false);
+        }
+        if (!retried && stalledMs >= kRetryAfterMs) {
+            retried = true;
+            g_api->log(g_mod, "[bugtrap] still no frames, retrying hooks");
+            DxgiHookDiagnose(g_api, g_mod, true);
+        }
+    }
     return 0;
 }
 

@@ -28,7 +28,10 @@ void FpsCounter::OnFrame() {
         double elapsedSec = static_cast<double>(now.QuadPart - m_lastIntervalTime.QuadPart) / static_cast<double>(m_frequency.QuadPart);
         double intervalSec = static_cast<double>(g_Config.updateIntervalMs) / 1000.0;
 
-        if (elapsedSec > 2.0) {
+        // Gap threshold scales with the update interval, otherwise an interval near
+        // the 2s cap would always look like a gap and the displayed FPS would stay 0.
+        const double gapSec = (intervalSec * 2.0 > 2.0) ? intervalSec * 2.0 : 2.0;
+        if (elapsedSec > gapSec) {
             // Gap, loading screen or pause: reset window so average isn't dragged down
             m_lastIntervalTime = now;
             m_intervalFrameCount = 1;
@@ -46,6 +49,13 @@ void FpsCounter::OnFrame() {
 
     m_lastFrameTime = now;
     LeaveCriticalSection(&m_cs);
+}
+
+double FpsCounter::SecondsSinceLastFrame() const {
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    if (m_frequency.QuadPart <= 0) return 0.0;
+    return static_cast<double>(now.QuadPart - m_lastFrameTime.QuadPart) / static_cast<double>(m_frequency.QuadPart);
 }
 
 float FpsCounter::GetFps() {

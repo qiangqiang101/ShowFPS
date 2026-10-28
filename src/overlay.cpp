@@ -239,21 +239,21 @@ void OverlayWindow::UpdatePositionAndRender() {
     wchar_t textBuf[128];
     if (g_Config.showGpuUsage && g_Config.showFrameTime) {
         if (g_Config.detailed) {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f GPU:%d%%  %.1f ms", fps, gpu, ft);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f GPU: %d%% %.1f ms", fps, gpu, ft);
         } else {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f GPU:%d%%  %.1f ms", fps, gpu, ft);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f GPU: %d%% %.1f ms", fps, gpu, ft);
         }
     } else if (g_Config.showGpuUsage) {
         if (g_Config.detailed) {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f GPU:%d%%", fps, gpu);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f GPU: %d%%", fps, gpu);
         } else {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f GPU:%d%%", fps, gpu);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f GPU: %d%%", fps, gpu);
         }
     } else if (g_Config.showFrameTime) {
         if (g_Config.detailed) {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f FPS  %.1f ms", fps, ft);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.1f FPS %.1f ms", fps, ft);
         } else {
-            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f FPS  %.1f ms", fps, ft);
+            std::swprintf(textBuf, sizeof(textBuf) / sizeof(wchar_t), L"%.0f FPS %.1f ms", fps, ft);
         }
     } else {
         if (g_Config.detailed) {

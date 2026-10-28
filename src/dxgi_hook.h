@@ -6,4 +6,7 @@
 #include <dxgi1_2.h>
 
 bool InstallDxgiHooks(const FH2ModApi* api, FH2Mod* mod);
+// Bugtrap: logs hook state while frames have stopped arriving. With retry set,
+// also re-enables the hooks in case something disabled them.
+void DxgiHookDiagnose(const FH2ModApi* api, FH2Mod* mod, bool retry);
 void UninstallDxgiHooks(const FH2ModApi* api, FH2Mod* mod);

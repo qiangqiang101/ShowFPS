@@ -13,6 +13,7 @@ public:
 
     float GetFps();
     float GetFrameTimeMs() const { return m_displayFrameTimeMs.load(std::memory_order_relaxed); }
+    double SecondsSinceLastFrame() const;
     uint64_t GetTotalFrames() const { return m_totalFrames.load(std::memory_order_relaxed); }
 
 private:
