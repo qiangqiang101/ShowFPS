@@ -127,6 +127,7 @@ DWORD WINAPI WorkerThread(LPVOID) {
     bool reported = false, retried = false;
     for (;;) {
         Sleep(1000);
+        DxgiHookService(g_api, g_mod);
         const uint64_t frames = g_FpsCounter.GetTotalFrames();
         const DWORD now = GetTickCount();
         char msg[256];
