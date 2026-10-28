@@ -29,7 +29,10 @@ jobs:
           "$env:RUNNER_TEMP\llvm-mingw-$v-ucrt-x86_64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       - name: Configure CMake
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=platform/cmake/mingw-w64-x86_64.cmake
+        shell: pwsh
+        run: |
+          python -m pip install ninja
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_TOOLCHAIN_FILE=platform/cmake/mingw-w64-x86_64.cmake"
 
       - name: Build and Package dist
         run: cmake --build build --target dist
