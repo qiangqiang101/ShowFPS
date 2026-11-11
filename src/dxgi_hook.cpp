@@ -50,6 +50,17 @@ std::mutex g_VtableMutex;
 // Vtable of a swap chain seen in Present or at creation, for the worker thread
 // to hook (hooking pauses the game's threads, so it isn't done from Present)
 std::atomic<void**> g_PendingVtbl{nullptr};
+
+// Vtable-slot hooks are a fallback, for when the inline Present hooks can't
+// be made or see no frames (DxgiHookDiagnose's retry). On top of a working
+// inline hook they can loop with an overlay that hooks the same slot again
+// later: the Steam overlay does that for every new swap chain, saving our
+// vtable detour as its original while our inline detour's original leads
+// into it, so each calls the other until the stack overflows (the game
+// crashing as it starts, when launched from Steam).
+std::atomic<bool> g_AllowVtableHooks{false};
+void** g_FallbackVtbl = nullptr;     // dxgi's swap chain vtable, found at start
+bool g_FallbackHasPresent1 = false;
 std::atomic<bool> g_PendingHasPresent1{false};
 
 std::atomic<uint64_t> g_PresentCalls{0};
@@ -168,7 +179,7 @@ HRESULT STDMETHODCALLTYPE DetourVmtPresent1(IDXGISwapChain1* This, UINT SyncInte
 // Hooks Present (and Present1) in the slots of `vtbl`. Only vtables inside a
 // loaded module: a heap copy made by another overlay could be freed later.
 void HookVtable(const FH2ModApi* api, FH2Mod* mod, void** vtbl, bool hasPresent1) {
-    if (!vtbl) return;
+    if (!vtbl || !g_AllowVtableHooks.load(std::memory_order_acquire)) return;
 
     std::lock_guard<std::mutex> lock(g_VtableMutex);
     if (FindVtableHook(vtbl)) return;
@@ -426,9 +437,17 @@ bool InstallDxgiHooks(const FH2ModApi* api, FH2Mod* mod) {
         present1Addr, reinterpret_cast<void*>(&DetourPresent1),
         reinterpret_cast<void**>(&g_OrigPresent1));
 
-    // 5. Vtable-slot hooks on dxgi's swap chain class, in case the inline ones
-    //    get patched over by another overlay
-    HookVtable(api, mod, vtable, vtableHasPresent1);
+    // 5. Vtable-slot hooks on dxgi's swap chain class, but only if the inline
+    //    ones couldn't be made (see g_AllowVtableHooks); DxgiHookDiagnose adds
+    //    them later if the inline ones see no frames
+    g_FallbackVtbl = vtable;
+    g_FallbackHasPresent1 = vtableHasPresent1;
+    if (!g_HookPresent && !g_HookPresent1) {
+        g_AllowVtableHooks.store(true, std::memory_order_release);
+        HookVtable(api, mod, vtable, vtableHasPresent1);
+    } else {
+        api->log(mod, "inline Present hooks on: vtable hooks only if they see no frames");
+    }
 
     if (!g_HookPresent && !g_HookPresent1 && g_VtableCount.load() == 0) {
         api->log(mod, "no Present hook could be made");
@@ -460,6 +479,16 @@ void DxgiHookDiagnose(const FH2ModApi* api, FH2Mod* mod, bool retry) {
     api->log(mod, msg);
 
     if (retry && api->api_version >= 3) {
+        // Only if the inline hooks never saw a frame: a stall after frames came through them (a
+        // launcher or loading screen sitting idle) means they work, and adding the vtable hooks on
+        // top of them is exactly what loops with the Steam overlay.
+        const bool inline_seen = g_PresentCalls.load() + g_Present1Calls.load() != 0;
+        if (inline_seen) {
+            api->log(mod, "[bugtrap] the inline hooks have seen frames: not adding the vtable hooks");
+        } else if (!g_AllowVtableHooks.exchange(true)) {
+            api->log(mod, "[bugtrap] no frames through the inline hooks: adding the vtable hooks");
+            HookVtable(api, mod, g_FallbackVtbl, g_FallbackHasPresent1);
+        }
         HookPendingVtable(api, mod);
         int res = api->enable_hooks(mod, nullptr);
         std::snprintf(msg, sizeof(msg), "[bugtrap] re-enabled hooks, enable_hooks returned %d", res);

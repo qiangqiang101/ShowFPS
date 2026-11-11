@@ -132,6 +132,15 @@ DWORD WINAPI WorkerThread(LPVOID) {
         const DWORD now = GetTickCount();
         char msg[256];
 
+        // No game yet: Azimuth's launcher is up, and nothing presents through dxgi until Play is
+        // pressed. Counting that as a stall added the vtable hooks before the game's first frame,
+        // which then looped with the Steam overlay's hooks (a stack overflow as the game started,
+        // launched from Steam, whenever Play was pressed more than 10 s after the launcher opened).
+        if (!g_api->game_base()) {
+            stallStart = now;
+            continue;
+        }
+
         if (frames != lastFrames) {
             if (reported) {
                 std::snprintf(msg, sizeof(msg), "[bugtrap] frames resumed after %lu ms stall (total frames %llu)",
